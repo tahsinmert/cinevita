@@ -1,0 +1,28 @@
+{
+  "name": "CineVita - AI Movie Discovery",
+  "short_name": "CineVita",
+  "description": "AI-powered movie discovery with smart recommendations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["entertainment", "lifestyle"],
+  "icons": [
+    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/favicon.png", "sizes": "180x180", "type": "image/png", "purpose": "apple-touch-icon" }
+  ],
+  "screenshots": [
+    {
+      "src": "/favicon.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}
+
+
