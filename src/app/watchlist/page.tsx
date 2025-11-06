@@ -1,59 +1,78 @@
 "use client"
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store/useAppStore'
 import { getMovieById, type OmdbMovieFull } from '@/lib/omdb'
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { AnimatePresence, Reorder } from 'framer-motion'
+import { toast } from 'sonner'
+import Image from 'next/image'
 
 export default function WatchlistPage() {
-  const ids = useAppStore((s) => s.watchlist)
-  const remove = useAppStore((s) => s.removeFromWatchlist)
-  const move = useAppStore((s) => s.moveInWatchlist)
+  const watchlist = useAppStore((s) => s.watchlist)
+  const reorderWatchlist = useAppStore((s) => s.reorderWatchlist)
+  const removeFromWatchlist = useAppStore((s) => s.removeFromWatchlist)
+  const clearWatchlist = useAppStore((s) => s.clearWatchlist)
   const [movies, setMovies] = useState<OmdbMovieFull[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
+    async function fetchWatchlist() {
       const details: OmdbMovieFull[] = []
-      for (const id of ids) details.push(await getMovieById(id))
+      for (const id of watchlist) {
+        if (cancelled) break
+        const d = await getMovieById(id)
+        details.push(d)
+      }
       if (!cancelled) setMovies(details)
+      if (!cancelled) setLoading(false)
     }
-    load()
+    fetchWatchlist()
     return () => { cancelled = true }
-  }, [ids])
+  }, [watchlist])
+
+  function handleReorder(newOrder: OmdbMovieFull[]) {
+    setMovies(newOrder)
+    reorderWatchlist(newOrder.map((m) => m.imdbID))
+  }
+
+  if (loading) {
+    return <div className="text-center py-10">Loading watchlist...</div>
+  }
+
+  if (movies.length === 0) {
+    return <div className="text-center py-10 text-neutral-500">No movies in watchlist yet.</div>
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Watchlist</h1>
+        <Button variant="destructive" onClick={() => { clearWatchlist(); toast.success('Cleared watchlist') }}>Clear</Button>
       </div>
-      {movies.length === 0 && <div className="text-neutral-500">No movies yet.</div>}
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {movies.map((m, idx) => (
-          <Card key={m.imdbID} className="overflow-hidden">
-            <Link href={`/movie/${m.imdbID}`} className="block">
-              {m.Poster && m.Poster !== 'N/A' ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.Poster} alt={m.Title} className="w-full h-56 object-cover" />
-              ) : (
-                <div className="w-full h-56 bg-neutral-200" />
-              )}
-              <div className="p-4">
-                <div className="font-medium">{m.Title}</div>
-                <div className="text-sm text-neutral-500">{m.Year}</div>
+      <Reorder.Group axis="y" values={movies} onReorder={handleReorder}>
+        <AnimatePresence>
+          {movies.map((m) => (
+            <Reorder.Item key={m.imdbID} value={m}>
+              <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-neutral-100">
+                <Link href={`/movie/${m.imdbID}`} className="block">
+                  {m.Poster && m.Poster !== 'N/A' ? (
+                    <Image width={500} height={500} src={m.Poster} alt={m.Title} className="w-24 h-24 object-cover rounded-md" />
+                  ) : (
+                    <div className="w-24 h-24 bg-neutral-200 rounded-md" />
+                  )}
+                </Link>
+                <div className="flex-1">
+                  <div className="font-medium">{m.Title}</div>
+                  <div className="text-sm text-neutral-500">IMDb {m.imdbRating || 'N/A'}</div>
+                </div>
+                <Button variant="ghost" onClick={() => { removeFromWatchlist(m.imdbID); toast.success('Removed from watchlist') }}>Remove</Button>
               </div>
-            </Link>
-            <div className="p-4 pt-0 flex gap-2">
-              <Button variant="secondary" onClick={() => remove(m.imdbID)}>Remove</Button>
-              <Button variant="secondary" disabled={idx === 0} onClick={() => move(idx, idx - 1)}>↑</Button>
-              <Button variant="secondary" disabled={idx === ids.length - 1} onClick={() => move(idx, idx + 1)}>↓</Button>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Reorder.Item>
+          ))}
+        </AnimatePresence>
+      </Reorder.Group>
     </div>
   )
 }
-
-
