@@ -1,61 +1,63 @@
 "use client"
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store/useAppStore'
 import { getMovieById, type OmdbMovieFull } from '@/lib/omdb'
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import Image from 'next/image'
 
 export default function WatchedPage() {
-  const ids = useAppStore((s) => s.watchedHistory)
-  const remove = useAppStore((s) => s.removeFromWatched)
-  const clearAll = useAppStore((s) => s.clearWatched)
+  const watched = useAppStore((s) => s.watchedHistory)
+  const clearWatched = useAppStore((s) => s.clearWatchedHistory)
   const [movies, setMovies] = useState<OmdbMovieFull[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
+    async function fetchWatched() {
       const details: OmdbMovieFull[] = []
-      for (const id of ids) details.push(await getMovieById(id))
+      for (const id of watched) {
+        if (cancelled) break
+        const d = await getMovieById(id)
+        details.push(d)
+      }
       if (!cancelled) setMovies(details)
+      if (!cancelled) setLoading(false)
     }
-    load()
+    fetchWatched()
     return () => { cancelled = true }
-  }, [ids])
+  }, [watched])
+
+  if (loading) {
+    return <div className="text-center py-10">Loading watched movies...</div>
+  }
+
+  if (movies.length === 0) {
+    return <div className="text-center py-10 text-neutral-500">No movies marked as watched yet.</div>
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Watched</h1>
-        {ids.length > 0 && (
-          <Button variant="destructive" onClick={clearAll}>Clear all</Button>
-        )}
+        <Button variant="destructive" onClick={() => { clearWatched(); toast.success('Cleared watched history') }}>Clear</Button>
       </div>
-      {movies.length === 0 && <div className="text-neutral-500">You haven't marked anything as watched yet.</div>}
       <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
         {movies.map((m) => (
-          <Card key={m.imdbID} className="overflow-hidden">
-            <Link href={`/movie/${m.imdbID}`} className="block">
-              {m.Poster && m.Poster !== 'N/A' ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.Poster} alt={m.Title} className="w-full h-56 object-cover" />
-              ) : (
-                <div className="w-full h-56 bg-neutral-200" />
-              )}
-              <div className="p-4">
-                <div className="font-medium">{m.Title}</div>
-                <div className="text-sm text-neutral-500">{m.Year}</div>
-              </div>
-            </Link>
-            <div className="p-4 pt-0 flex gap-2">
-              <Button variant="secondary" onClick={() => remove(m.imdbID)}>Remove</Button>
-              <Button onClick={() => useAppStore.getState().addToWatchlist(m.imdbID)}>+ Watchlist</Button>
+          <Link href={`/movie/${m.imdbID}`} key={m.imdbID} className="block">
+            {m.Poster && m.Poster !== 'N/A' ? (
+              <Image width={500} height={500} src={m.Poster} alt={m.Title} className="w-full h-56 object-cover" />
+            ) : (
+              <div className="w-full h-56 bg-neutral-200" />
+            )}
+            <div className="p-2">
+              <div className="font-medium">{m.Title}</div>
+              <div className="text-sm text-neutral-500">IMDb {m.imdbRating || 'N/A'}</div>
             </div>
-          </Card>
+          </Link>
         ))}
       </div>
     </div>
   )
 }
-
-

@@ -120,9 +120,7 @@ export default function RootLayout({
           </Suspense>
           <main className="container mx-auto px-4 pb-16 pt-6">
             <TransitionProvider>
-              <Suspense fallback={null}>
-                {children}
-              </Suspense>
+              {children}
             </TransitionProvider>
           </main>
           <ScrollToTop />
